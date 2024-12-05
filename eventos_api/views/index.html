@@ -1,0 +1,281 @@
+//FRONT-END
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Eventos</title>
+   <style>body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    width: 80%;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1, h2 {
+    color: #333;
+}
+
+form {
+    margin-top: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+input, textarea, select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+}
+
+button {
+    background-color: black;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: black;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sistema de Eventos</h1>
+        
+        <div class="section">
+            <h2>Cadastrar Novo Evento</h2>
+            <form id="eventForm">
+                <label for="eventName">Nome:</label>
+                <input type="text" id="eventName" required>
+
+                <label for="eventDate">Data:</label>
+                <input type="date" id="eventDate" required>
+
+                <label for="eventLocation">Local:</label>
+                <input type="text" id="eventLocation" required>
+
+                <label for="eventDescription">Descrição:</label>
+                <textarea id="eventDescription" required></textarea>
+
+                <button type="submit">Cadastrar Evento</button>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>Eventos Cadastrados</h2>
+            <table id="eventTable">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Data</th>
+                        <th>Local</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Adicionar Participante</h2>
+            <form id="participantForm">
+                <label for="participantName">Nome:</label>
+                <input type="text" id="participantName" required>
+
+                <label for="participantEmail">Email:</label>
+                <input type="email" id="participantEmail" required>
+
+                <label for="participantPhone">Telefone:</label>
+                <input type="tel" id="participantPhone">
+
+                <label for="eventSelect">Escolher Evento:</label>
+                <select id="eventSelect" required></select>
+
+                <button type="submit">Cadastrar Participante</button>
+            </form>
+        </div>
+    </div>
+<script> 
+    
+    const apiUrl = 'http://localhost:3000/api';
+ 
+ // Função para listar eventos
+ const listEvents = async () => {
+     try {
+         const response = await fetch(`${apiUrl}/eventos`);
+         const events = await response.json();
+         const eventTable = document.getElementById('eventTable').getElementsByTagName('tbody')[0];
+         const eventSelect = document.getElementById('eventSelect');
+        
+         // Limpar a tabela e o seletor de eventos
+         eventTable.innerHTML = '';
+         eventSelect.innerHTML = '';
+        
+         events.forEach(event => {
+             // Preencher a tabela com eventos
+             const row = eventTable.insertRow();
+             row.innerHTML = `
+                 <td>${event.nome}</td>
+                 <td>${event.data}</td>
+                 <td>${event.local}</td>
+                 <td><button onclick="viewParticipants(${event.evento_id})">Ver Participantes</button></td>
+             `;
+            
+             // Preencher o seletor de eventos para cadastrar participantes
+             const option = document.createElement('option');
+             option.value = event.evento_id;
+             option.textContent = event.nome;
+             eventSelect.appendChild(option);
+         });
+     } catch (error) {
+         console.error('Erro ao listar eventos:', error);
+     }
+ };
+  
+ // Função para cadastrar um evento
+ const createEvent = async (eventData) => {
+     try {
+         const response = await fetch(`${apiUrl}/eventos`, {
+             method: 'POST',
+             headers: {
+                 'Content-Type': 'application/json',
+             },
+             body: JSON.stringify(eventData),
+         });
+  
+         if (!response.ok) {
+             throw new Error('Erro ao cadastrar evento');
+         }
+  
+         alert('Evento cadastrado com sucesso!');
+         listEvents(); // Atualiza a lista de eventos
+     } catch (error) {
+         console.error('Erro ao cadastrar evento:', error);
+     }
+ };
+  
+ // Função para adicionar um participante a um evento
+  
+ const createParticipant = async (eventoId, participantData) => {
+     try {
+         console.log("Evento ID selecionado:", eventoId); // Verificação do evento
+         if (!eventoId) {
+             alert('Por favor, selecione um evento.');
+             return;
+         }
+  
+         const response = await fetch(`${apiUrl}/participantes/${eventoId}`, {
+             method: 'POST',
+             headers: {
+                 'Content-Type': 'application/json',
+             },
+             body: JSON.stringify(participantData),
+         });
+  
+         const json = await response.json();
+         if (response.status == 200) {
+            
+             alert('Participante cadastrado com sucesso!');
+             viewParticipants(eventoId);
+         }
+  
+         listEvents()
+     } catch (error) {
+         alert(`Erro ao cadastrar participante: ${error.message}`);
+     }
+ };
+  
+ // Função para visualizar os participantes de um evento
+ const viewParticipants = async (eventoId) => {
+     try {
+         const response = await fetch(`${apiUrl}/participantes/eventos/${eventoId}`);
+         const participantes = await response.json();
+         let participantsHtml = '';
+        
+         participantes.forEach(participant => {
+             participantsHtml += `
+                 <div>
+                     <p><strong>Nome:</strong> ${participant.nome}</p>
+                     <p><strong>Email:</strong> ${participant.email}</p>
+                     <p><strong>Telefone:</strong> ${participant.telefone}</p>
+                     <hr>
+                 </div>
+             `;
+         });
+  
+         document.body.innerHTML = `
+             <h1>Participantes do Evento</h1>
+             ${participantsHtml}
+             <a href="index.html">Voltar para lista de eventos</a>
+         `;
+     } catch (error) {
+         console.error('Erro ao visualizar participantes:', error);
+     }
+    
+ };
+  
+ // Inicialização - Listar eventos ao carregar a página
+ document.addEventListener('DOMContentLoaded', listEvents);
+  
+ // Captura o evento de envio do formulário de evento
+ document.getElementById('eventForm').addEventListener('submit', (e) => {
+     e.preventDefault();
+  
+     const eventData = {
+         nome: document.getElementById('eventName').value,
+         data: document.getElementById('eventDate').value,
+         local: document.getElementById('eventLocation').value,
+         descricao: document.getElementById('eventDescription').value,
+     };
+  
+     createEvent(eventData);
+ });
+  
+ // Captura o evento de envio do formulário de participante
+ document.getElementById('participantForm').addEventListener('submit', (e) => {
+     e.preventDefault();
+  
+     const eventoId = document.getElementById('eventSelect').value;
+     if (!eventoId) {
+         alert('Por favor, selecione um evento.');
+         return;
+     }
+  
+     const participantData = {
+         nome: document.getElementById('participantName').value,
+         email: document.getElementById('participantEmail').value,
+         telefone: document.getElementById('participantPhone').value,
+     };
+     createParticipant(eventoId, participantData);
+ });
+    
+
+  </script>
+</body>
+</html>
